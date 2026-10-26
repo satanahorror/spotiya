@@ -7,34 +7,32 @@ on:
 
 jobs:
   aarch64:
-    name: aarch64 bullseye
+    name: aarch64 buster
     runs-on: ubuntu-22.04
     container:
-      image: debian:bullseye
-    timeout-minutes: 45
+      image: debian:buster
+    timeout-minutes: 60
     steps:
-      - name: Fix sources (bullseye is EOL, use archive)
+      - name: Fix sources (buster archive) + add arm64
         run: |
           set -e
           cat > /etc/apt/sources.list <<EOF
-          deb http://archive.debian.org/debian bullseye main
-          deb http://archive.debian.org/debian-security bullseye-security main
+          deb [arch=amd64] http://archive.debian.org/debian buster main
+          deb [arch=amd64] http://archive.debian.org/debian-security buster/updates main
           EOF
           echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid
+          dpkg --add-architecture arm64
+          cat >> /etc/apt/sources.list <<EOF
+          deb [arch=arm64] http://archive.debian.org/debian buster main
+          deb [arch=arm64] http://archive.debian.org/debian-security buster/updates main
+          EOF
+          apt-get update
       - name: Install deps + node20
         run: |
           set -e
-          apt-get update
           apt-get install -y --no-install-recommends curl ca-certificates gnupg git build-essential pkg-config
           curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
           apt-get install -y --no-install-recommends nodejs
-          dpkg --add-architecture arm64
-          cat >> /etc/apt/sources.list <<EOF
-          deb [arch=arm64] http://archive.debian.org/debian bullseye main
-          EOF
-          sed -i 's|^deb http://archive.debian.org/debian bullseye main$|deb [arch=amd64] http://archive.debian.org/debian bullseye main|' /etc/apt/sources.list
-          sed -i 's|^deb http://archive.debian.org/debian-security|deb [arch=amd64] http://archive.debian.org/debian-security|' /etc/apt/sources.list
-          apt-get update
           apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libasound2-dev:arm64
       - uses: actions/checkout@v4
       - name: Install Rust
