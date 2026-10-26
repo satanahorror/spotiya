@@ -1,0 +1,46 @@
+name: Build aarch64 (experimental)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  aarch64:
+    name: aarch64-unknown-linux-gnu
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cross-compile tooling
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo tee /etc/apt/sources.list.d/arm64.list > /dev/null <<EOF
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main universe
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main universe
+          EOF
+          sudo sed -i 's|^deb |deb [arch=amd64] |' /etc/apt/sources.list
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config gcc-aarch64-linux-gnu libasound2-dev:arm64
+      - name: Install Rust 1.98 with aarch64 target
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup target add aarch64-unknown-linux-gnu --toolchain 1.98.0
+          rustup default 1.98.0
+      - name: Build
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          PKG_CONFIG_PATH_aarch64_unknown_linux_gnu: /usr/lib/aarch64-linux-gnu/pkgconfig
+          PKG_CONFIG_SYSROOT_DIR: /
+          PKG_CONFIG_ALLOW_CROSS: "1"
+        run: cargo build --release --locked --target aarch64-unknown-linux-gnu
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp target/aarch64-unknown-linux-gnu/release/spotiya dist/
+          tar -czf dist/spotiya-aarch64-linux-gnu.tar.gz -C dist spotiya
+          cd dist && sha256sum spotiya-aarch64-linux-gnu.tar.gz | tee SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spotiya-aarch64-linux-gnu
+          path: dist/*
