@@ -33,7 +33,7 @@ jobs:
           apt-get install -y --no-install-recommends curl ca-certificates gnupg git build-essential pkg-config
           curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
           apt-get install -y --no-install-recommends nodejs
-          apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libasound2-dev:arm64
+          apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64-cross linux-libc-dev-arm64-cross libasound2-dev:arm64
       - uses: actions/checkout@v4
       - name: Install Rust
         run: |
